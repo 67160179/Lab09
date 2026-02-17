@@ -249,3 +249,364 @@ tasks = JSON.parse(localStorage.getItem("tasks")) || [];
 อาจเกิดหากลบ task โดยไม่หยุด interval ก่อน
 
 ---
+
+# Pomodoro
+
+# Lab 09 — Pomodoro Timer
+
+---
+
+## ส่วนที่ 1: ความเข้าใจเทคนิค Pomodoro
+
+### 1.1 เทคนิค Pomodoro คืออะไร เหตุใดจึงเลือกใช้เวลา 25 นาที
+
+เป็นเทคนิคแบ่งเวลาทำงานเป็นช่วงสั้น ๆ เพื่อให้สมาธิไม่ล้า
+25 นาทีถูกเลือกเพราะเป็นช่วงที่สมองโฟกัสได้เต็มที่ก่อนเริ่มเหนื่อย ทำให้ประสิทธิภาพสูงกว่าการทำยาว ๆ
+
+---
+
+### 1.2 หากต้องการปรับเวลา Work/Break ให้แตกต่างจาก default (25/5) จะต้องแก้ไขโค้ดส่วนไหน
+
+- ค่าเริ่มต้นใน state (workDuration, breakDuration)
+
+- input settings (workTimeInput, breakTimeInput)
+
+- ฟังก์ชัน resetTimer และ startTimer ตอนกำหนดเวลาใหม่
+
+### 1.3 ทำไมหลังจาก 4 รอบ (pomodoros) จึงมี Long Break ขนาด 15 นาที ประโยชน์คืออะไร
+
+สมองสะสมความเหนื่อยล้าในหลายรอบสั้น
+Long break ช่วยรีเฟรชสมอง ลด burnout และเพิ่มประสิทธิภาพรอบถัดไป
+
+## ส่วนที่ 2: การจัดโครงสร้าง State
+
+### คำถาม 2.1
+
+ปัจจุบัน app เก็บ state อะไรบ้าง
+
+**คำตอบ:**
+
+- isRunning
+
+- isWorkPhase
+
+- timeLeft
+
+- totalTime
+
+- currentSession
+
+- completedSessions
+
+- intervalId
+
+- workDuration / breakDuration / longBreakDuration
+
+---
+
+### คำถาม 2.2
+
+ทำไมจึงต้องมี rounds state หากแค่เก็บ phase ก็พอ
+
+**คำตอบ:**  
+phase บอกแค่ว่าทำงานหรือพัก
+แต่ session ใช้นับรอบเพื่อรู้ว่าเมื่อไหร่ต้องพักยาว
+
+---
+
+### คำถาม 2.3
+
+ถ้าต้องการให้ Pomodoro Count อัปเดต เมื่อจบแต่ละ Work phase จะแก้ไขฟังก์ชันยังไง
+
+**คำตอบ:**
+
+```js
+if (state.isWorkPhase) {
+  state.completedSessions++;
+}
+```
+
+## ส่วนที่ 3: Timer Logic
+
+### คำถาม 3.1
+
+อธิบายการทำงานของ setInterval() ในส่วน timer - จะเกิดอะไรขึ้นทุก 1 วินาที
+
+**คำตอบ:**
+ทุก 1 วินาที:
+
+- ลดเวลา
+
+- เช็คหมดหรือยัง
+
+- -เปลี่ยน phase
+
+- อัปเดตหน้าจอ
+
+### คำถาม 3.2
+
+เหตุใดจึงต้องมี timerInterval เป็น global variable ถ้าไม่มี app จะเป็นยังไง
+
+**คำตอบ:**
+เพื่อให้ pause/reset สามารถหยุด timer ได้
+ถ้าไม่เก็บไว้ จะ clearInterval ไม่ได้
+
+### คำถาม 3.3
+
+ถ้าผู้ใช้คลิก “เริ่ม” 2 ครั้งติดต่อกัน จะเกิดอะไรขึ้น มีวิธีแก้หรือไม่
+
+**คำตอบ:**
+แก้:
+if(state.isRunning) return;
+
+## ส่วนที่ 4: DOM & UI
+
+### คำถาม 4.1
+
+ฟังก์ชัน updateDisplay() ทำอะไร ต้องเรียกจากที่ไหนบ้าง
+
+**คำตอบ:**
+อัปเดต:
+
+- เวลา
+
+- progress bar
+
+- phase
+
+- ปุ่ม
+
+- stats
+
+ต้องเรียกทุกครั้งที่ state เปลี่ยน
+
+### คำถาม 4.2
+
+formatTime() ใช้ padding ด้วย padStart(2, "0") เพื่ออะไร ถ้าไม่มี timer จะแสดง 5:3 แทน 05:03 ได้หรือไม่
+
+**คำตอบ:**
+เติมเลข 0 ด้านหน้าให้เป็น 2 หลัก
+ไม่มี → 5:3
+มี → 05:03
+
+### คำถาม 4.3
+
+Progress bar คำนวณเปอร์เซ็นต์ยังไง เขียนสูตรออกมา
+
+**คำตอบ:**
+progress = (เวลาที่ผ่าน / เวลาทั้งหมด) × 100
+
+โค้ด:
+(state.totalTime - state.timeLeft) / state.totalTime \* 100
+
+## ส่วนที่ 5: Events & Controls
+
+### คำถาม 5.1
+
+ปุ่มควบคุมมีอะไรบ้าง แต่ละปุ่มเรียกฟังก์ชันไหน
+
+**คำตอบ:**
+
+- Start → startTimer
+
+- Pause → startTimer (toggle)
+
+- Reset → resetTimer
+
+- Settings → change event
+
+---
+
+### คำถาม 5.2
+
+ทำไม Pause ต้องหยุด timer ด้วย `clearInterval()` หากไม่ทำจะเป็นอย่างไร
+
+**คำตอบ:**  
+ไม่งั้นตัวจับเวลาจะยังทำงานอยู่แม้ UI หยุด
+
+---
+
+### คำถาม 5.3
+
+Reset button ควรตั้งค่ากลับเป็นอะไร
+
+**คำตอบ:**
+
+- timeLeft = workDuration
+
+- phase = work
+
+- session = 1
+
+- clear interval
+
+---
+
+## ส่วนที่ 6: Notifications & Sound
+
+### คำถาม 6.1
+
+ฟังก์ชัน `playSound()` ใช้เทคนิคอะไรในการสร้างเสียง
+
+**คำตอบ:**  
+ใช้ Web Audio API (Oscillator)
+
+---
+
+### คำถาม 6.2
+
+ทำไม notification ควร work/break ต่างกันอย่างไร เสียง alarm ที่ดีควรเป็นยังไง
+
+**คำตอบ:**  
+ผู้ใช้แยกได้ทันทีว่า “ทำงานเสร็จ” หรือ “พักเสร็จ”
+เสียงควรสั้น ชัด ไม่รบกวน
+
+---
+
+### คำถาม 6.3
+
+ถ้าต้องการเพิ่ม Desktop Notification ด้วย Browser Notification API จะแก้ไขยังไง
+
+**คำตอบ:**
+
+```js
+if (Notification.permission === "granted") {
+  new Notification("Break Time!");
+}
+```
+
+## ส่วนที่ 7: Progress Tracking & Stats
+
+### คำถาม 7.1
+
+Stats ต้องติดตามข้อมูลอะไร
+
+**คำตอบ:**
+
+- จำนวนรอบสำเร็จ
+- เวลาทำงานรวม
+- จำนวน long break
+
+---
+
+### คำถาม 7.2
+
+ตำแหน่งที่ดีที่สุดในการอัปเดต stats คือที่ไหน
+
+**คำตอบ:**  
+ตอนจบ work phase
+
+---
+
+### คำถาม 7.3
+
+วิธีการบันทึก stats ไว้ใน LocalStorage ได้อย่างไร
+
+**คำตอบ:**
+
+```js
+localStorage.setItem("stats", JSON.stringify(state));
+```
+
+---
+
+## ส่วนที่ 8: Bug Detection
+
+### คำถาม 8.1
+
+ถ้า timer กำลังเดินอยู่ แล้วผู้ใช้เปิด DevTools ขนาดใหญ่ timer จะยังคงเดินต่อหรือไม่
+
+**คำตอบ:**  
+timer ยังเดิน แต่ความแม่นอาจลด (tab throttling)
+
+---
+
+### คำถาม 8.2
+
+ถ้า completePhase() เรียก ในขณะที่ timer ยังวิ่งอยู่ จะเกิด memory leak ได้หรือไม่
+
+**คำตอบ:**  
+เสี่ยง interval ซ้อน → memory leak
+
+---
+
+### คำถาม 8.3
+
+ใน mobile ถ้าผู้ใช้ล็อก screen ขณะ timer เดิน timer จะหยุดหรือยังคงเดิน วิธีแก้คืออะไร
+
+**คำตอบ:**  
+ส่วนใหญ่ timer ช้าหรือหยุด
+แก้ → คำนวณจาก timestamp แทนการนับทีละวินาที
+
+---
+
+## ส่วนที่ 9: Architecture & Code Quality
+
+### คำถาม 9.1
+
+ถ้าต้องการแยก Timer logic ออกจาก UI ควรสร้าง class อย่างไร
+
+**คำตอบ:**  
+สร้าง PomodoroTimer class จัดการเวลา
+UI เรียก method เท่านั้น
+
+---
+
+### คำถาม 9.2
+
+Functions ที่มีมากควรจัดไว้ใน object เพื่อจัดการได้ดีขึ้นหรือไม่
+
+**คำตอบ:**  
+ดีขึ้น เพราะจัดโครงสร้างและลด global pollution
+
+---
+
+### คำถาม 9.3
+
+Code reusability - ส่วนไหนของโค้ดสามารถทำให้เป็น utility functions ได้
+
+**คำตอบ:**
+
+- formatTime
+
+- playSound
+
+- showNotification
+
+- calculateProgress
+
+---
+
+## ส่วนที่ 10: Enhancements
+
+### คำถาม 10.1
+
+วิธีเพิ่ม Dark Mode ควรแก้ไข CSS/JS ส่วนไหนบ้าง
+
+**คำตอบ:**
+
+- CSS: ใช้ class dark
+
+- JS: toggle class ที่ body
+
+---
+
+### คำถาม 10.2
+
+วิธีบันทึกประวัติการใช้งาน (session history) คืออะไร
+
+**คำตอบ:**  
+บันทึก session ลง array แล้ว save LocalStorage
+
+---
+
+### คำถาม 10.3
+
+วิธีเพิ่ม Keyboard Shortcuts (Space = Start/Pause, R = Reset) ควรใช้ event ไหน
+
+**คำตอบ:**
+
+```js
+Space → start/pause
+R → reset
+```
