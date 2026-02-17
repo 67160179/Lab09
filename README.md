@@ -610,3 +610,336 @@ Code reusability - ส่วนไหนของโค้ดสามารถ�
 Space → start/pause
 R → reset
 ```
+
+# Weather App
+
+## ส่วนที่ 1: Fetch API & HTTP Requests
+
+### คำถาม 1.1
+
+Fetch API เป็นวิธีมาตรฐานของ JavaScript สำหรับส่งคำขอ HTTP ไปยังเซิร์ฟเวอร์และรับข้อมูลกลับมา โดยทำงานแบบ Promise
+
+ความแตกต่างหลัก:
+
+| Fetch API                    | XMLHttpRequest              |
+| ---------------------------- | --------------------------- |
+| ใช้ Promise                  | ใช้ event/callback          |
+| เขียนร่วมกับ async/await ได้ | ใช้กับ async/await ไม่สะดวก |
+| โค้ดสั้น อ่านง่าย            | โค้ดยาวและซับซ้อนกว่า       |
+| โครงสร้างทันสมัย             | รูปแบบเก่า                  |
+
+### คำถาม 1.2
+
+โค้ดนี้ทำอะไร อธิบายการทำงานแต่ละขั้นตอน
+
+```js
+fetch(url)
+  .then((response) => response.json())
+  .then((data) => console.log(data))
+  .catch((error) => console.error(error));
+```
+
+- คำตอบ:
+
+- fetch(url) → ส่ง HTTP request ไปยัง API
+
+- response.json() → แปลง response เป็น JSON
+
+- console.log(data) → แสดงข้อมูล
+
+- .catch() → จับ error
+
+### คำถาม 1.3
+
+ถ้า API response ล้มเหลว (network error) จะถูก handle ที่ไหน `.catch()` จะจับได้หรือไม่
+
+**คำตอบ:**
+
+- หากเกิด **network error** (เช่น ไม่มีอินเทอร์เน็ต, server ปิด) → Promise จะ reject → `.catch()` จับได้
+- แต่ถ้าเป็น **HTTP error** เช่น 404 หรือ 500 → `fetch()` จะยังถือว่าสำเร็จ และ `.catch()` จะไม่ทำงาน
+
+ดังนั้นต้องตรวจเองด้วย
+
+```js
+if (!response.ok) {
+  throw new Error("Request failed");
+}
+```
+
+## ส่วนที่ 2: Geocoding API
+
+### คำถาม 2.1
+
+Geocoding API ทำหน้าที่อะไร ทำไมจึงต้องใช้ก่อนเรียก Weather API
+
+**คำตอบ:**  
+แปลงชื่อเมือง → latitude/longitude  
+Weather API ต้องใช้พิกัด จึงต้องเรียกก่อน
+
+---
+
+### คำถาม 2.2
+
+When user searches “Bangkok” ควรส่ง request ไปที่ endpoint ไหนก่อน ได้ข้อมูลอะไรจาก response
+
+**คำตอบ:**  
+เรียก Geocoding API  
+ได้ชื่อประเทศ และพิกัด lat/lon
+
+---
+
+### คำถาม 2.3
+
+ถ้า user ค้นหาเมือง “Nonthaburi” ซึ่งชื่อเดียวกับเมืองอื่น app จะตัดสินใจอย่างไร
+
+**คำตอบ:**  
+เลือก result แรกจาก API (อันดับความแม่นยำสูงสุด)
+
+---
+
+## ส่วนที่ 3: Weather Data & Parameters
+
+### คำถาม 3.1
+
+Weather API ต้องการ parameters อะไรบ้าง
+
+**คำตอบ:**  
+latitude, longitude, current, hourly, timezone
+
+---
+
+### คำถาม 3.2
+
+Parameters นี้ request ข้อมูลอะไร ทำไมต้องใช้ weather_code
+
+```js
+const params =
+  "?latitude=13.7&longitude=100.5&current=temperature_2m,humidity,weather_code";
+```
+
+**คำตอบ:**  
+ดึงอุณหภูมิ ความชื้น และรหัสสภาพอากาศ  
+weather_code ใช้แปลงเป็น icon/emoji
+
+---
+
+### คำถาม 3.3
+
+ความแตกต่างระหว่าง current weather และ hourly forecast คืออะไร
+
+**คำตอบ:**  
+current = ตอนนี้  
+hourly = ล่วงหน้าเป็นช่วงเวลา
+
+---
+
+## ส่วนที่ 4: Async/Await Pattern
+
+### คำถาม 4.1
+
+ทำไมจึงใช้ async/await แทน `.then().catch()`
+
+```js
+async function getWeather(city) {
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(error);
+  }
+}
+```
+
+**คำตอบ:**  
+อ่านง่าย เหมือน synchronous และจัดการ error ง่าย
+
+---
+
+### คำถาม 4.2
+
+`await` ทำอะไร ถ้าไม่ใช้ code จะเป็นยังไง
+
+**คำตอบ:**  
+รอ Promise เสร็จ  
+ไม่ใช้จะได้ Promise แทนข้อมูล
+
+---
+
+### คำถาม 4.3
+
+`try-catch` block ใช้เพื่ออะไร
+
+**คำตอบ:**  
+จับ error จาก async operations
+
+---
+
+## ส่วนที่ 5: DOM Manipulation
+
+### คำถาม 5.1
+
+เมื่อได้ข้อมูล weather มา app ต้องแสดงผล element ใดบ้าง
+
+**คำตอบ:**  
+เมือง อุณหภูมิ ความชื้น ลม ความกดอากาศ การมองเห็น
+
+---
+
+### คำถาม 5.2
+
+Loading spinner ปรากฏในไหน เมื่อไหร่ควรแสดง/ซ่อน
+
+**คำตอบ:**  
+แสดงตอน fetch  
+ซ่อนเมื่อโหลดเสร็จ
+
+---
+
+### คำถาม 5.3
+
+ถ้าต้องอัปเดต temperature display ทุก 10 นาที ควรใช้ setInterval() หรือ setTimeout()
+
+**คำตอบ:**  
+setInterval()
+
+---
+
+## ส่วนที่ 6: Data Storage (LocalStorage)
+
+### คำถาม 6.1
+
+LocalStorage ใช้เพื่ออะไร บันทึก recent cities ยังไง
+
+```js
+localStorage.setItem("recentCities", JSON.stringify(cities));
+```
+
+**คำตอบ:**  
+เก็บข้อมูลใน browser
+
+## ส่วนที่ 7: Error Handling & Edge Cases
+
+### คำถาม 7.1
+
+ถ้า user ค้นหาเมืองที่ไม่มี (เช่น “XYZ”) app จะแสดง error อย่างไร
+
+**คำตอบ:**  
+แสดง error message จาก API ว่าไม่พบเมือง
+
+---
+
+### คำถาม 7.2
+
+ถ้า network ไม่มี (offline) fetch จะ throw error หรือ return success
+
+**คำตอบ:**  
+throw error แล้วไปเข้า catch
+
+---
+
+### คำถาม 7.3
+
+เมื่อ hover หรือ click ที่ recent city button โปรแกรมจะทำอะไร
+
+**คำตอบ:**  
+เรียก `fetchWeather()` เพื่อโหลดข้อมูลเมืองนั้นใหม่
+
+---
+
+## ส่วนที่ 8: Weather Display
+
+### คำถาม 8.1
+
+Weather code 0 = Clear sky, 1 = Partly cloudy, 80 = Drizzle… เลือก icon/emoji ยังไง
+
+**คำตอบ:**  
+ใช้ mapping ตาราง `weather_code → emoji`
+
+---
+
+### คำถาม 8.2
+
+ความแตกต่างระหว่าง อุณหภูมิ (°C), ความชื้น (%), ความเร็วลม (m/s) คืออะไร
+
+**คำตอบ:**  
+°C = ความร้อนอากาศ  
+% = ปริมาณไอน้ำในอากาศ  
+m/s = ความเร็วลม
+
+---
+
+### คำถาม 8.3
+
+Hourly forecast แสดง 24 ชั่วโมง ต้องเลือก element ไหนจาก response
+
+**คำตอบ:**  
+`data.hourly.temperature_2m`
+
+---
+
+## ส่วนที่ 9: Responsive Design & Mobile
+
+### คำถาม 9.1
+
+ใน mobile screen weather card ควรมี layout อย่างไร
+
+**คำตอบ:**  
+จัดเรียงแนวตั้ง (vertical)
+
+---
+
+### คำถาม 9.2
+
+เมื่อผู้ใช้ rotate device grid/flex ควรตัดสินใจอย่างไร
+
+**คำตอบ:**  
+ปรับ layout ตามความกว้างหน้าจอ (media query)
+
+---
+
+### คำถาม 9.3
+
+Input field และ button บน mobile ต้องมี font size เท่าไร
+
+**คำตอบ:**  
+อย่างน้อย 16px เพื่อแตะง่าย
+
+---
+
+## ส่วนที่ 10: Code Architecture & Enhancement
+
+### คำถาม 10.1
+
+ถ้าต้องสร้าง Weather class เพื่อจัดการ logic อย่างไร
+
+```js
+class WeatherApp {
+  async searchCity(cityName) {}
+  async fetchWeather(lat, lon) {}
+  displayWeather(data) {}
+}
+```
+
+**คำตอบ:**
+สร้าง class แยก logic API ออกจาก UI
+
+---
+
+### คำถาม 10.2
+
+วิธีเพิ่ม Favorite Cities feature ยังไง ต้องแก้ไข HTML/CSS/JS ส่วนไหนบ้าง
+
+**คำตอบ:**
+เพิ่มปุ่ม favorite และเก็บใน LocalStorage
+
+---
+
+### คำถาม 10.3
+
+วิธีเพิ่ม Dark Mode ด้วย CSS variables ได้อย่างไร
+
+**คำตอบ:**
+สลับ class แล้วเปลี่ยนค่า CSS variables
+
+## 67160199 วัชระพงษ์ คำนึงการ
